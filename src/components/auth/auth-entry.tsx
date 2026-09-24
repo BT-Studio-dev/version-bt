@@ -38,7 +38,12 @@ export function AuthEntry({
   registrationOpen?: boolean;
   firstUser?: boolean;
 }) {
-  const [panel, setPanel] = useState<BootstrapPayload | null>(null);
+  const [panel, setPanel] = useState<BootstrapPayload | null>(() => {
+    if (typeof window !== "undefined" && getStoredToken()) {
+      return getCachedPanel<BootstrapPayload>() ?? null;
+    }
+    return null;
+  });
 
   const open = useCallback((data: BootstrapPayload) => {
     cachePanel(data);
@@ -51,8 +56,6 @@ export function AuthEntry({
   // and let the network call refresh it underneath.
   useEffect(() => {
     if (!getStoredToken()) return;
-    const cached = getCachedPanel<BootstrapPayload>();
-    if (cached) setPanel(cached);
     let cancelled = false;
     api<BootstrapPayload>("/api/bootstrap")
       .then((data) => {

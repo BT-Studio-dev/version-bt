@@ -1,16 +1,33 @@
 export type PanelRole = "owner" | "admin" | "member";
 export type PanelStatus = "active" | "suspended";
 export type PanelView =
-  | "home"
+  | "overview"
+  | "nodes"
   | "servers"
+  | "deploy"
+  | "fleet"
+  | "api-keys"
+  | "settings"
+  | "account"
+  | "home"
   | "tutorials"
   | "team"
   | "music"
-  | "settings"
   | "users"
-  | "updates"
-  | "account";
-export type SettingsTab = "general" | "appearance" | "wallpapers" | "bars" | "access";
+  | "updates";
+
+export type SettingsTab =
+  | "branding"
+  | "features"
+  | "runtime"
+  | "appearance"
+  | "authentication"
+  | "users"
+  | "system"
+  | "general"
+  | "wallpapers"
+  | "bars"
+  | "access";
 
 /** Panel color-scheme: classic dark, OLED pure-black (#000000), or light. */
 export type ThemeMode = "dark" | "light" | "oled";
@@ -54,7 +71,34 @@ export type AccessSettings = {
   showDemoLogin: boolean;
 };
 
-export type PanelSettings = ThemeSettings & GeneralSettings & BarsSettings & AccessSettings;
+export type FeaturesSettings = {
+  playitEnabled: boolean;
+  onboardingTutorial: boolean;
+  cinematicLogin: boolean;
+};
+
+export type AuthSettings = {
+  enableGoogleLogin: boolean;
+  firebaseApiKey: string;
+  firebaseAuthDomain: string;
+  firebaseProjectId: string;
+  firebaseStorageBucket: string;
+  firebaseMessagingSenderId: string;
+  firebaseAppId: string;
+};
+
+export type SystemSettings = {
+  mainPort: number;
+  defaultDriver: string;
+};
+
+export type PanelSettings = ThemeSettings &
+  GeneralSettings &
+  BarsSettings &
+  AccessSettings &
+  FeaturesSettings &
+  AuthSettings &
+  SystemSettings;
 
 export type PanelProfile = {
   userId: string;
@@ -145,11 +189,35 @@ export const DEFAULT_ACCESS: AccessSettings = {
   showDemoLogin: true,
 };
 
+export const DEFAULT_FEATURES: FeaturesSettings = {
+  playitEnabled: false,
+  onboardingTutorial: true,
+  cinematicLogin: true,
+};
+
+export const DEFAULT_AUTH: AuthSettings = {
+  enableGoogleLogin: false,
+  firebaseApiKey: "",
+  firebaseAuthDomain: "your-project.firebaseapp.com",
+  firebaseProjectId: "your-project-id",
+  firebaseStorageBucket: "your-project.appspot.com",
+  firebaseMessagingSenderId: "1234567890",
+  firebaseAppId: "1:1234567890:web:abcdef",
+};
+
+export const DEFAULT_SYSTEM: SystemSettings = {
+  mainPort: 3000,
+  defaultDriver: "Docker",
+};
+
 export const DEFAULT_SETTINGS: PanelSettings = {
   ...DEFAULT_THEME,
   ...DEFAULT_GENERAL,
   ...DEFAULT_BARS,
   ...DEFAULT_ACCESS,
+  ...DEFAULT_FEATURES,
+  ...DEFAULT_AUTH,
+  ...DEFAULT_SYSTEM,
 };
 
 export const THEME_KEYS = Object.keys(DEFAULT_THEME) as (keyof ThemeSettings)[];
@@ -160,7 +228,7 @@ export function pickTheme(settings: PanelSettings): ThemeSettings {
   return out as ThemeSettings;
 }
 
-export const PANEL_VERSION = "v2.1.1";
+export const PANEL_VERSION = "v3.0.0";
 export const REPO_URL = "https://github.com/BT-Studio-dev/BT-Panel";
 
 /** Demo accounts seeded on a fresh database (ids below match the seed). */
@@ -174,15 +242,20 @@ export function isAdminRole(role: PanelRole | string | undefined): boolean {
 }
 
 export const PANEL_VIEWS: PanelView[] = [
-  "home",
+  "overview",
+  "nodes",
   "servers",
+  "deploy",
+  "fleet",
+  "api-keys",
+  "settings",
+  "account",
+  "home",
   "tutorials",
   "team",
   "music",
-  "settings",
   "users",
   "updates",
-  "account",
 ];
 const ADMIN_VIEWS: PanelView[] = ["settings", "users", "updates"];
 

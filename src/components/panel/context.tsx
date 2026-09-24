@@ -105,32 +105,39 @@ export function PanelProvider({
   const [profile, setProfile] = useState(initial.profile);
   const [settings, setSettings] = useState(initial.settings);
   const [draft, setDraftState] = useState<ThemeSettings>(() => pickTheme(initial.settings));
-  const [override, setOverride] = useState<ThemeMode | null>(initialModeOverride);
+  const [override, setOverride] = useState<ThemeMode | null>(() => {
+    if (typeof window !== "undefined") {
+      const local = getLocalModeOverride();
+      if (local) return local;
+    }
+    return initialModeOverride;
+  });
   const [team, setTeam] = useState(initial.team);
   const [servers, setServers] = useState(initial.servers);
   const [userCount, setUserCount] = useState(initial.userCount);
   const [view, setViewState] = useState<PanelView>(initialView);
   const [settingsTab, setSettingsTabState] = useState<SettingsTab>("appearance");
   const [openServerId, setOpenServerId] = useState<string | null>(initialServerId);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return window.localStorage.getItem(COLLAPSED_KEY) === "1";
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
   const draftRef = useRef(draft);
-  draftRef.current = draft;
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
 
   const isAdmin = isAdminRole(profile.role);
   const mode: ThemeMode = override ?? draft.mode;
 
   // ── Theme ──
-  useEffect(() => {
-    const local = getLocalModeOverride();
-    if (local && local !== initialModeOverride) setOverride(local);
-    try {
-      setSidebarCollapsed(window.localStorage.getItem(COLLAPSED_KEY) === "1");
-    } catch {
-      /* ignore */
-    }
-  }, [initialModeOverride]);
-
   useEffect(() => {
     applyTheme(draft, mode);
   }, [draft, mode]);
@@ -274,9 +281,22 @@ export function PanelProvider({
 
   // ── Ambient music player (persists across views) ──
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [prefs, setPrefsState] = useState<MusicPrefs>({ volume: 0.35, loop: true, autoplay: false });
+  const [prefs, setPrefsState] = useState<MusicPrefs>(() => {
+    const defaultPrefs: MusicPrefs = { volume: 0.35, loop: true, autoplay: false };
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(MUSIC_KEY);
+        if (raw) return { ...defaultPrefs, ...(JSON.parse(raw) as Partial<MusicPrefs>) };
+      } catch {
+        /* ignore */
+      }
+    }
+    return defaultPrefs;
+  });
   const prefsRef = useRef(prefs);
-  prefsRef.current = prefs;
+  useEffect(() => {
+    prefsRef.current = prefs;
+  }, [prefs]);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -316,15 +336,6 @@ export function PanelProvider({
 
   const setPrefs = useCallback((patch: Partial<MusicPrefs>) => {
     setPrefsState((prev) => ({ ...prev, ...patch }));
-  }, []);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(MUSIC_KEY);
-      if (raw) setPrefsState((prev) => ({ ...prev, ...(JSON.parse(raw) as Partial<MusicPrefs>) }));
-    } catch {
-      /* ignore */
-    }
   }, []);
 
   useEffect(() => {

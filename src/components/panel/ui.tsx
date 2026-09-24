@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ArrowUpRight, Bot, CodeXml, Crosshair, Flame, Hexagon, LoaderCircle, Pickaxe, Swords, X } from "lucide-react";
 import { getTemplate, type TemplateIcon } from "@/lib/panel/catalog";
 import type { ServerStatus } from "@/lib/panel/types";
@@ -43,13 +43,17 @@ export function PresenceAvatar({
 
 /** Client-only ticking clock — null during SSR/first paint (no hydration drift). */
 export function useNow(intervalMs = 1000): number | null {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    setNow(Date.now());
-    const id = window.setInterval(() => setNow(Date.now()), intervalMs);
-    return () => window.clearInterval(id);
-  }, [intervalMs]);
-  return now;
+  return useSyncExternalStore(
+    useCallback(
+      (onStoreChange) => {
+        const id = window.setInterval(onStoreChange, intervalMs);
+        return () => window.clearInterval(id);
+      },
+      [intervalMs],
+    ),
+    () => Date.now(),
+    () => null,
+  );
 }
 
 const ICONS: Record<TemplateIcon, typeof Pickaxe> = {
@@ -245,8 +249,12 @@ export function ColorField({
   hint?: string;
   onChange: (value: string) => void;
 }) {
+  const [prevValue, setPrevValue] = useState(value);
   const [text, setText] = useState(value);
-  useEffect(() => setText(value), [value]);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    setText(value);
+  }
   return (
     <div>
       <div className="text-[12.5px] font-bold text-ice">{label}</div>

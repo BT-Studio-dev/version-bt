@@ -39,19 +39,24 @@ function bail() {
  * out, we leave for sign-in instead of showing a spinner.
  */
 export function ClientGate({ theme }: { theme: ThemeSettings }) {
-  const [ready, setReady] = useState<Ready | null>(null);
+  const [ready, setReady] = useState<Ready | null>(() => {
+    if (typeof window !== "undefined" && getStoredToken()) {
+      const cached = getCachedPanel<BootstrapPayload>();
+      if (cached) return readReady(cached);
+    }
+    return null;
+  });
 
   useEffect(() => {
     if (!getStoredToken()) {
       window.location.replace("/login");
       return;
     }
-    const cached = getCachedPanel<BootstrapPayload>();
-    if (cached) setReady(readReady(cached));
+    const hasCached = !!getCachedPanel<BootstrapPayload>();
 
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      if (!cancelled && !cached) bail();
+      if (!cancelled && !hasCached) bail();
     }, TIMEOUT_MS);
 
     api<BootstrapPayload>("/api/bootstrap")
@@ -64,7 +69,7 @@ export function ClientGate({ theme }: { theme: ThemeSettings }) {
       .catch(() => {
         if (cancelled) return;
         window.clearTimeout(timer);
-        if (!cached) bail();
+        if (!hasCached) bail();
         else clearStoredToken(); // cache stays on screen; refresh() will bounce out if the session is really gone
       });
     return () => {

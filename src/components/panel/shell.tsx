@@ -3,16 +3,20 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import {
-  BookOpen,
+  Activity,
+  Box,
   ChevronDown,
-  House,
+  Key,
+  LayoutGrid,
   LogOut,
   Menu,
   Moon,
   Music2,
   Pause,
   Play,
+  Plus,
   RefreshCw,
+  Search,
   Server,
   Settings,
   ShieldCheck,
@@ -21,35 +25,44 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import type { BootstrapPayload, PanelView, ThemeMode } from "@/lib/panel/types";
+import { PANEL_VERSION, type BootstrapPayload, type PanelView, type ThemeMode } from "@/lib/panel/types";
 import { cn } from "@/lib/utils";
 import { PanelProvider, usePanel } from "./context";
+import { NotificationsBell } from "./notifications";
 import { BrandMark, PresenceAvatar } from "./ui";
 import { WallpaperLayer } from "./wallpaper-layer";
 import { HomeView } from "./views/home-view";
+import { NodesView } from "./views/nodes-view";
 import { ServersView } from "./views/servers-view";
+import { DeployWizardView } from "./views/deploy-wizard-view";
+import { FleetView } from "./views/fleet-view";
+import { ApiKeysView } from "./views/api-keys-view";
 import { SettingsView } from "./views/settings-view";
 import { UsersView } from "./views/users-view";
 import { AccountView } from "./views/account-view";
 import { MusicView, TeamView, TutorialsView, UpdatesView } from "./views/misc-views";
 
-type NavItem = { id: PanelView; label: string; icon: LucideIcon; section: "dashboard" | "admin" | "account" };
+type NavItem = { id: PanelView; label: string; icon: LucideIcon; section: "menu" | "admin" | "account" };
 
 const NAV: NavItem[] = [
-  { id: "home", label: "Home", icon: House, section: "dashboard" },
-  { id: "servers", label: "Servers", icon: Server, section: "dashboard" },
-  { id: "tutorials", label: "Tutorials", icon: BookOpen, section: "dashboard" },
-  { id: "team", label: "Team", icon: Users, section: "dashboard" },
-  { id: "music", label: "Music", icon: Music2, section: "dashboard" },
-  { id: "settings", label: "Admin Settings", icon: Settings, section: "admin" },
-  { id: "users", label: "User Management", icon: ShieldCheck, section: "admin" },
-  { id: "updates", label: "Updates", icon: RefreshCw, section: "admin" },
-  { id: "account", label: "My Account", icon: UserRound, section: "account" },
+  { id: "overview", label: "OVERVIEW", icon: LayoutGrid, section: "menu" },
+  { id: "nodes", label: "NODES", icon: Activity, section: "menu" },
+  { id: "servers", label: "SERVERS", icon: Server, section: "menu" },
+  { id: "deploy", label: "DEPLOY", icon: Plus, section: "menu" },
+  { id: "fleet", label: "FLEET", icon: Box, section: "menu" },
+  { id: "api-keys", label: "API KEYS", icon: Key, section: "menu" },
+  { id: "settings", label: "ADMIN SETTINGS", icon: Settings, section: "admin" },
+  { id: "account", label: "ACCOUNT", icon: UserRound, section: "account" },
 ];
 
 const TITLES: Record<PanelView, string> = {
-  home: "Home",
-  servers: "Servers",
+  overview: "Overview",
+  home: "Overview",
+  nodes: "Nodes Monitoring",
+  servers: "Instances",
+  deploy: "Deploy Instance",
+  fleet: "Fleet Administration",
+  "api-keys": "API Keys Management",
   tutorials: "Tutorials",
   team: "Team",
   music: "Music",
@@ -93,8 +106,12 @@ function ShellInner() {
           <Header />
           <main className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-4 pb-10 md:px-6">
             <div key={view} className="view-enter mx-auto w-full max-w-[1600px]">
-              {view === "home" ? <HomeView /> : null}
+              {view === "overview" || view === "home" ? <HomeView /> : null}
+              {view === "nodes" ? <NodesView /> : null}
               {view === "servers" ? <ServersView /> : null}
+              {view === "deploy" ? <DeployWizardView /> : null}
+              {view === "fleet" ? <FleetView /> : null}
+              {view === "api-keys" ? <ApiKeysView /> : null}
               {view === "tutorials" ? <TutorialsView /> : null}
               {view === "team" ? <TeamView /> : null}
               {view === "music" ? <MusicView /> : null}
@@ -134,8 +151,6 @@ function Sidebar() {
   const running = servers.filter((s) => s.status === "running").length;
 
   const visible = NAV.filter((item) => {
-    if (item.id === "team" && !settings.showTeam && !isAdmin) return false;
-    if (item.id === "tutorials" && !settings.tutorialsEnabled) return false;
     if (item.section === "admin" && !isAdmin) return false;
     return true;
   });
@@ -144,7 +159,7 @@ function Sidebar() {
     <NavButton
       key={item.id}
       item={item}
-      active={view === item.id}
+      active={view === item.id || (item.id === "overview" && view === "home")}
       collapsed={collapsed}
       onClick={() => setView(item.id)}
       badge={item.id === "servers" && servers.length > 0 ? `${running}/${servers.length}` : undefined}
@@ -193,49 +208,52 @@ function Sidebar() {
         </div>
 
         <nav className="scrollbar-thin flex flex-1 flex-col gap-0.5 overflow-y-auto">
-          <SectionLabel collapsed={collapsed}>Dashboard</SectionLabel>
-          {visible.filter((item) => item.section === "dashboard").map(renderItem)}
-          {isAdmin ? (
-            <>
-              <SectionLabel collapsed={collapsed}>
-                Admin
-                <span className="ml-2 rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-white">
-                  ADMIN
-                </span>
-              </SectionLabel>
-              {visible.filter((item) => item.section === "admin").map(renderItem)}
-            </>
-          ) : null}
-          <SectionLabel collapsed={collapsed}>Account</SectionLabel>
+          <SectionLabel collapsed={collapsed}>MENU</SectionLabel>
+          {visible.filter((item) => item.section === "menu").map(renderItem)}
+          {visible.filter((item) => item.section === "admin").map(renderItem)}
           {visible.filter((item) => item.section === "account").map(renderItem)}
         </nav>
 
-        <div className="mt-3 border-t border-line pt-3">
-          <button
-            type="button"
-            className={cn(
-              "mb-2 flex w-full items-center gap-2.5 rounded-[12px] p-1.5 text-left transition-colors hover:bg-fill",
-              collapsed && "justify-center",
-            )}
-            onClick={() => setView("account")}
-          >
-            <PresenceAvatar name={profile.username} src={profile.profilePic} size="sm" online />
-            {!collapsed ? (
-              <div className="min-w-0">
-                <div className="truncate text-[13px] font-extrabold">{profile.username}</div>
-                <div className="text-[10px] font-bold tracking-[0.14em] text-steel uppercase">{profile.role}</div>
+        {/* Footer Brand & Version (Images 5/6) */}
+        <div className="mt-3 border-t border-line pt-3 space-y-2">
+          {!collapsed ? (
+            <div className="flex items-center justify-between px-2 py-1">
+              <div className="flex items-center gap-2">
+                <BrandMark className="size-5 shrink-0" src={settings.panelLogo || undefined} />
+                <span className="text-[12px] font-extrabold text-ice tracking-wider">PANEL</span>
               </div>
+              <span className="rounded bg-accent/20 border border-accent/40 px-2 py-0.5 text-[10px] font-bold font-mono text-accent">
+                {PANEL_VERSION}
+              </span>
+            </div>
+          ) : null}
+
+          {/* User Profile Card */}
+          <div className="flex items-center justify-between rounded-[12px] border border-line bg-sunken/60 p-2">
+            <button
+              type="button"
+              className={cn("flex flex-1 items-center gap-2.5 text-left truncate", collapsed && "justify-center")}
+              onClick={() => setView("account")}
+            >
+              <PresenceAvatar name={profile.username} src={profile.profilePic} size="sm" online />
+              {!collapsed ? (
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-extrabold text-ice">{profile.username}</div>
+                  <div className="text-[10px] font-bold tracking-[0.14em] text-steel uppercase">{profile.role}</div>
+                </div>
+              ) : null}
+            </button>
+            {!collapsed ? (
+              <button
+                type="button"
+                className="p-1.5 text-steel hover:text-danger"
+                onClick={() => void signOut()}
+                title="Logout"
+              >
+                <LogOut className="size-4" />
+              </button>
             ) : null}
-          </button>
-          <button
-            type="button"
-            className={cn("nav-item text-danger hover:text-danger", collapsed && "justify-center px-2.5")}
-            onClick={() => void signOut()}
-            title="Logout"
-          >
-            <LogOut className="size-4 shrink-0" />
-            {!collapsed ? <span>Logout</span> : null}
-          </button>
+          </div>
         </div>
       </aside>
     </>
@@ -268,13 +286,17 @@ function NavButton({
   return (
     <button
       type="button"
-      className={cn("nav-item", active && "active", collapsed && "justify-center px-2.5")}
+      className={cn(
+        "nav-item",
+        active && "active",
+        collapsed && "justify-center px-2.5",
+      )}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       title={collapsed ? item.label : undefined}
     >
       <Icon className="size-4 shrink-0" />
-      {!collapsed ? <span className="flex-1 truncate">{item.label}</span> : null}
+      {!collapsed ? <span className="flex-1 truncate text-[12px] font-bold tracking-wider">{item.label}</span> : null}
       {!collapsed && badge ? (
         <span className="rounded-full border border-ok/30 bg-ok/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ok">
           {badge}
@@ -312,7 +334,27 @@ function Header() {
         </button>
         <h1 className="truncate text-[18px] font-extrabold tracking-tight">{TITLES[view]}</h1>
       </div>
-      <div className="flex items-center gap-2">
+
+      <div className="flex items-center gap-2.5">
+        {/* Status Badge (Image 9) */}
+        <div className="hidden sm:inline-flex items-center gap-2 rounded-full border border-ok/30 bg-ok/10 px-3 py-1 text-[11px] font-extrabold tracking-wider text-ok">
+          <span className="size-2 rounded-full bg-ok animate-pulse" />
+          ALL SYSTEMS GO
+        </div>
+
+        {/* Search Icon */}
+        <button
+          type="button"
+          onClick={() => setView("servers")}
+          className="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-sunken text-steel transition-colors hover:border-line-strong hover:text-ice"
+          title="Search"
+        >
+          <Search className="size-4" />
+        </button>
+
+        {/* Notifications Popup */}
+        <NotificationsBell />
+
         {music.playing ? (
           <button
             type="button"
@@ -329,6 +371,7 @@ function Header() {
             Now playing
           </button>
         ) : null}
+
         <button
           type="button"
           className="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-sunken text-steel transition-colors hover:border-line-strong hover:text-ice"
@@ -338,6 +381,7 @@ function Header() {
         >
           {mode === "light" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
         </button>
+
         {settings.showHeaderUser ? (
           <div className="relative" ref={ref}>
             <button
