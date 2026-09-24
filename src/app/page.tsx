@@ -2,23 +2,43 @@ import { cookies } from "next/headers";
 import { ClientGate } from "@/components/panel/client-gate";
 import { PanelShell } from "@/components/panel/shell";
 import { MODE_COOKIE, parseMode } from "@/lib/panel/theme";
-import { pickTheme, resolveView } from "@/lib/panel/types";
+import { DEFAULT_SETTINGS, pickTheme, resolveView } from "@/lib/panel/types";
 import { getSessionUser } from "@/lib/server/auth";
-import { getBootstrap, getSettings } from "@/lib/server/data";
+import { getBootstrap, getSettings, type UserRow } from "@/lib/server/data";
 
 export default async function PanelPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const user = await getSessionUser();
+  let user: UserRow | null = null;
+  try {
+    user = await getSessionUser();
+  } catch {
+    user = null;
+  }
+
+  let settings = DEFAULT_SETTINGS;
+  try {
+    settings = await getSettings();
+  } catch {
+    settings = DEFAULT_SETTINGS;
+  }
+
   if (!user) {
     // No cookie session: the browser may still hold a token (third-party
     // cookies blocked in an embedded preview) — let the client decide.
-    const settings = await getSettings();
     return <ClientGate theme={pickTheme(settings)} />;
   }
-  const [data, params, store] = await Promise.all([getBootstrap(user), searchParams, cookies()]);
+
+  let data = null;
+  try {
+    data = await getBootstrap(user);
+  } catch {
+    return <ClientGate theme={pickTheme(settings)} />;
+  }
+
+  const [params, store] = await Promise.all([searchParams, cookies()]);
   const view = resolveView(params.view, user.role);
   const serverId = view === "servers" && typeof params.server === "string" ? params.server : null;
   return (
